@@ -1,7 +1,7 @@
 /*
- * A simple project application for the game tic tac toe.
- * Although tic tac toe is often played in a 3x3 board, my implementation
- * allows the board to be modified to any size.
+ TO DO .....
+deny and win autoMove.
+
  *
  */
 package mytictactoe;
@@ -13,23 +13,194 @@ import java.util.*;
  */
 public class Board {
 
-    char [][] tiles; // main board
     
-    public Board() //default
-    {  this(3); }
+    private Point [][] board;
+    private Player lastPlayer;
+    private ArrayList <Point> freePoints;
+    private int lenToWin;
     
-    //constructor
-    public Board(int lw)
-    {
-        tiles =  new char[lw][lw];
-        
-        for(int i = 0; i < lw; i++)
-        {  
-            for(int j = 0; j < lw; j++)
-            {  tiles[i][j] = '_';     }
+    
+    public Board(int xLen, int yLen, int lenToWin){
+        freePoints = new ArrayList();
+        board = new Point[xLen][yLen];
+        this.lenToWin = lenToWin;
+        for(int x = 0; x < xLen; x++){
+            for(int y = 0; y < yLen; y++){
+                board[x][y] = new Point(x,y);
+                freePoints.add(board[x][y]);
+            }
         }
     }
+    
+    public Board(){
+         this(3,3,3);
+    }
+    
+    public boolean isDraw(){
+        return freePoints.isEmpty();
+    }
+    
+    public boolean isPointFree(int x, int y){
+        return !board[x][y].isOccupied();
+    }
+    
+    public Point getAutoMove(Player player){
+        System.out.println("Player : " + player.getName() + " moved");//***********debug*******
+        if(player.getLastMove() == null){ 
+            System.out.println("INIt");
+            return freePoints.get((int) (Math.random() 
+                    * (freePoints.size() - 1)));
+        }
+        Point point;
+        if((point = getWinPoint(player)) != null){
+            System.out.println("Win");//***********debug*******
+            return point;
+        } 
+        if((point = getWinPoint(lastPlayer)) != null){
+            System.out.println("Deny");//***********debug*******
+            return point;
+        }
+         System.out.println("Ramdomed");//***********debug*******
+         return freePoints.remove((int) (Math.random() * (freePoints.size() - 1)));
+        
+    }  
+    
+    private Point getWinPoint(Player player){
+        System.out.println("check player : "+player.getName());
+        if(countVertical(player) == lenToWin - 1){
+            System.out.println("Found Vertical");//***********debug*******
+           Point winningMove = getFreePoint(player, player.getLastMove(), 1, 0);
+            winningMove =  winningMove != null ?  winningMove : getFreePoint(player, player.getLastMove(), -1, 0);
+            if(winningMove != null) return winningMove;
+        } 
+        if(countLeftDiagonal(player) == lenToWin - 1){
+            System.out.println("Found LDIAG");//***********debug*******
+           Point winningMove = getFreePoint(player, player.getLastMove(), 1, 1);
+            winningMove =  winningMove != null ?  winningMove : getFreePoint(player, player.getLastMove(), -1, -1);
+            if(winningMove != null) return winningMove;
+        }
+        if(countRightDiagonal(player) == lenToWin - 1){
+            System.out.println("Found RDIAG");//***********debug*******
+           Point winningMove = getFreePoint(player, player.getLastMove(), -1, 1);
+             winningMove =  winningMove != null ?  winningMove : getFreePoint(player, player.getLastMove(), 1, -1);
+              if(winningMove != null) return winningMove;
+        }
+        if(countHorizontal(player) == lenToWin - 1){
+            System.out.println("Found HORIZONTAL");//***********debug*******
+           Point winningMove = getFreePoint(player, player.getLastMove(), 0, 1);
+            winningMove =  winningMove != null ?  winningMove : getFreePoint(player, player.getLastMove(), 0, -1);    
+             if(winningMove != null) return winningMove;
+        }   
+        
+        return null; // no free point found
+    }
+    
+    
+    private Point getFreePoint(Player player, Point point, int xModifier, int yModifier){
+        try{
+            Point newPoint = board[point.getX() + xModifier][point.getY() + yModifier];
+            if(!newPoint.isOccupied()){
+                return newPoint;                               
+            }else{ 
+                return getFreePoint(player, newPoint, xModifier, yModifier);
+            }
+        }catch(ArrayIndexOutOfBoundsException e){
+            return null;
+        }
+    }
+    
+    public Point playerMove(int x, int y, Player player){
+        board[x][y].setPlayer(player);
+        lastPlayer = player;
+        freePoints.remove(board[x][y]);
+        System.out.println("freepoints :" + freePoints.size()); //***********debug*******
+        return board[x][y];
+    }
+    
+    protected boolean isWinner(Player player){
+      return countVertical(player) == lenToWin  || 
+              countLeftDiagonal(player) == lenToWin  ||
+              countRightDiagonal(player) == lenToWin  ||
+              countHorizontal(player) == lenToWin ;
+    }             
+    
+    private int countVertical(Player player){
+        return 1 + count(player.getLastMove(), player, -1, 0) 
+                + count(player.getLastMove(), player, 1, 0); 
+    }
+    
+    private int countLeftDiagonal(Player player){
+        return 1 + count(player.getLastMove(), player, -1, -1) 
+                + count(player.getLastMove(), player, 1, 1); 
+    }
+    
+    private int countRightDiagonal(Player player){
+        return 1 + count(player.getLastMove(), player, -1, 1) 
+                + count(player.getLastMove(), player, 1, -1); 
+    }
+    
+    private int countHorizontal(Player player){
+        return 1 + count(player.getLastMove(), player, 0, -1) 
+                + count(player.getLastMove(), player, 0, 1); 
+    }
+    
+    private int count(Point point, Player player, int xModifier, int yModifier){
+        try{
+            Point newPoint = board[point.getX() + xModifier][point.getY() + yModifier];
+            if(!newPoint.isOccupied()){
+                return count(newPoint, player ,xModifier , yModifier);
+            }else if(newPoint.getPlayer().equals(player)){
+                return 1 + count(newPoint, player ,xModifier , yModifier);
+            }else{
+                return -1 + count(newPoint, player ,xModifier , yModifier);
+            }
+        }catch(ArrayIndexOutOfBoundsException e){
+            return 0;
+        }
+    }
+    
+    
    
+    @Override
+    public String toString(){
+        StringBuilder builder = new StringBuilder();
+        for(int i = 0; i < board.length; i++){
+            for(int j = 0; j < board.length; j++){
+                builder.append((board[i][j].getPlayer() == null)?
+                        "_":board[i][j].getPlayer() );
+            }
+            builder.append("\n");
+        }
+        return builder.toString();
+    }
+   
+}
+
+/*
+class Lister{
+    private Point [] points;
+    private int capacity;
+    private int size;
+    
+    Lister(int cap){
+        capacity = cap;
+        points = new Point [cap];
+        size = 0;
+    }
+    
+    void add(Point p){
+        
+    }
+    
+}
+
+
+
+
+///////////////////////////////////////////////////////////////
+///////*****Old source Code. TO be deleted***//////////////////
+///////////////////////////////////////////////////////////////
+   /*
     public boolean isFull()
     {
         int numSpace = 0;
@@ -239,7 +410,7 @@ public class Board {
      * @param args the command line arguments
      */
     
-    
+    /*
     
     //Tester
     public static void main(String[] args) {
@@ -280,4 +451,4 @@ public class Board {
           
     }
     
-}
+    */
